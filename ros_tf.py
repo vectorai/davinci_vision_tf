@@ -61,19 +61,24 @@ class RosTensorFlow():
 
     def callback(self, image_msg):
         cv_image = self._cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
+        print('got image')
         if sys.argv[1]=='segmentation':
-            cv_image = np.array(np.rollaxis(cv2.resize(cv_image,(self.img_shape[2],self.img_shape[1])),2))
+            cv_image = np.array([np.rollaxis(cv2.resize(cv_image,(self.img_shape[2],self.img_shape[1])),2)])
+            print('reshaped image')
         # copy from
         # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/image/imagenet/classify_image.py
         #image_data = cv2.imencode('.jpg', cv_image)[1].tostring()
         # Creates graph from saved GraphDef.
         predictions = self._session.run(
             self.tensor_2_run, {self.input_tensor: cv_image})
+        print('ran tensor')
         if sys.argv[1]=='segmentation':
         # Creates node ID --> English string lookup.
             predictions=visualize(np.argmax(predictions[0],axis=1).reshape((self.img_shape[1],self.img_shape[2])), False)
+            print('reformatted results')
 
         self._pub.publish(self._cv_bridge.cv2_to_imgmsg(predictions,'bgr8'))
+        print('published results')
 
     def main(self):
         rospy.spin()
