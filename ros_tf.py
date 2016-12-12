@@ -55,9 +55,9 @@ class RosTensorFlow():
         self.img_shape=img_shape
 
         self._sub = rospy.Subscriber('image', Image, self.callback, queue_size=1)
+        print('found camera')
         self._pub = rospy.Publisher('result', Image, queue_size=1)
-        self.score_threshold = rospy.get_param('~score_threshold', 0.1)
-        self.use_top_k = rospy.get_param('~use_top_k', 5)
+        print('setup publishing')
 
     def callback(self, image_msg):
         cv_image = self._cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
@@ -83,10 +83,10 @@ if __name__ == '__main__':
     tensor=None
     if sys.argv[1]=='segmentation':
         the_model=model((3,360,480))
+        the_model.load_weights('model_weight_ep100.hdf5')
         x=K.placeholder(shape=(None,3,360,480),dtype='float32')
         outputs=the_model(x)
         tensor=RosTensorFlow(outputs,(3,360,480),x)
     elif sys.argv[1]=='detection':
         pass
-    tensor = RosTensorFlow()
     tensor.main()

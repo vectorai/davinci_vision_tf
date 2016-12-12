@@ -19,7 +19,7 @@ from keras.layers.convolutional import Convolution2D, MaxPooling2D, UpSampling2D
 from keras.layers.normalization import BatchNormalization
 from keras.utils import np_utils
 from keras.regularizers import ActivityRegularizer
-from keras.utils.visualize_util import plot
+#from keras.utils.visualize_util import plot
 
 from keras import backend as K
 import h5py as h5
@@ -134,3 +134,4 @@ def model(input_shape):
     autoencoder.add(Activation('softmax'))
     #from keras.optimizers import SGD
     #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
+    return autoencoder
