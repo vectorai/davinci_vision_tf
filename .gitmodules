@@ -1,0 +1,3 @@
+[submodule "Faster-RCNN_TF"]
+	path = Faster-RCNN_TF
+	url = https://github.com/smallcorgi/Faster-RCNN_TF.git
