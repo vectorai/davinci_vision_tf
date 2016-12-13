@@ -1,4 +1,5 @@
 import rospy
+import sys
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
@@ -44,6 +45,63 @@ def visualize(temp, plot=True):
         plt.imshow(rgb)
     else:
         return rgb
+def vis_detections(im, class_name, dets,ax, thresh=0.5):
+    """Draw detected bounding boxes."""
+    inds = np.where(dets[:, -1] >= thresh)[0]
+    if len(inds) == 0:
+        return
+
+    for i in inds:
+        bbox = dets[i, :4]
+        score = dets[i, -1]
+
+        ax.add_patch(
+            plt.Rectangle((bbox[0], bbox[1]),
+                          bbox[2] - bbox[0],
+                          bbox[3] - bbox[1], fill=False,
+                          edgecolor='red', linewidth=3.5)
+            )
+        ax.text(bbox[0], bbox[1] - 2,
+                '{:s} {:.3f}'.format(class_name, score),
+                bbox=dict(facecolor='blue', alpha=0.5),
+                fontsize=14, color='white')
+
+    ax.set_title(('{} detections with '
+                  'p({} | box) >= {:.1f}').format(class_name, class_name,
+                                                  thresh),
+                  fontsize=14)
+    plt.axis('off')
+    plt.tight_layout()
+    plt.draw()
+def demo(sess, net, im,vis=False):
+    """Detect object classes in an image using pre-computed object proposals."""
+
+    # Load the demo image
+    #im_file = os.path.join('/home/corgi/Lab/label/pos_frame/ACCV/training/000001/',image_name)
+
+    # Detect all object classes and regress object bounds
+    scores, boxes = im_detect(sess, net, im)
+    print ('Detection took {:.3f}s for '
+           '{:d} object proposals').format(timer.total_time, boxes.shape[0])
+
+    # Visualize detections for each class
+    im = im[:, :, (2, 1, 0)]
+    fig, ax = plt.subplots(figsize=(12, 12))
+    ax.imshow(im, aspect='equal')
+
+    CONF_THRESH = 0.8
+    NMS_THRESH = 0.3
+    det_list=[]
+    for cls_ind, cls in enumerate(CLASSES[1:]):
+        cls_ind += 1 # because we skipped background
+        cls_boxes = boxes[:, 4*cls_ind:4*(cls_ind + 1)]
+        cls_scores = scores[:, cls_ind]
+        dets = np.hstack((cls_boxes,
+                          cls_scores[:, np.newaxis])).astype(np.float32)
+        keep = nms(dets, NMS_THRESH)
+        dets = dets[keep, :]
+        if vis:
+            vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
 class RosTensorFlow():
     def __init__(self,model=None,img_shape=None, input_tensor=None):
         classify_image.maybe_download_and_extract()
@@ -69,17 +127,18 @@ class RosTensorFlow():
         # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/image/imagenet/classify_image.py
         #image_data = cv2.imencode('.jpg', cv_image)[1].tostring()
         # Creates graph from saved GraphDef.
-        predictions = self._session.run(
-            self.tensor_2_run, {self.input_tensor: cv_image})
-        print('ran tensor')
-        if sys.argv[1]=='segmentation':
+            predictions = self._session.run(
+                self.tensor_2_run, {self.input_tensor: cv_image})
+            print('ran tensor')
         # Creates node ID --> English string lookup.
             predictions=visualize(np.argmax(predictions[0],axis=1).reshape((self.img_shape[1],self.img_shape[2])), False)
             print('reformatted results')
 
-        self._pub.publish(self._cv_bridge.cv2_to_imgmsg(predictions,'bgr8'))
-        print('published results')
-
+            self._pub.publish(self._cv_bridge.cv2_to_imgmsg(predictions,'bgr8'))
+            print('published results')
+        if sys.argv[1]=='detection':
+            self.tensor_2_run(self._session,cv_image)
+            #TODO: Figure out how to publishmultiple arrays at once
     def main(self):
         rospy.spin()
 
@@ -93,5 +152,12 @@ if __name__ == '__main__':
         outputs=the_model(x)
         tensor=RosTensorFlow(outputs,(3,360,480),x)
     elif sys.argv[1]=='detection':
-        pass
+        sys.path.insert(0,'Faster-RCNN_TF/tools/')
+        import _init_paths
+        from fast_rcnn.config import cfg
+        from fast_rcnn.test import im_detect
+        from fast_rcnn.nms_wrapper import nms
+        from networks.factory import get_network
+        net=get_network('VGGnet_test')
+        tensor = RosTensorFlow(lambda x,y:demo(x,net,y))
     tensor.main()
