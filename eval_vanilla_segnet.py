@@ -19,7 +19,7 @@ from keras.layers.convolutional import Convolution2D, MaxPooling2D, UpSampling2D
 from keras.layers.normalization import BatchNormalization
 from keras.utils import np_utils
 from keras.regularizers import ActivityRegularizer
-from keras.utils.visualize_util import plot
+#from keras.utils.visualize_util import plot
 
 from keras import backend as K
 import h5py as h5
@@ -28,7 +28,7 @@ import numpy as np
 
 path = './household_data/rgbd-dataset/'
 data_shape = 360*480
-num_classes=10
+num_classes=53
 def normalized(rgb):
     #return rgb/255.0
     norm=np.zeros((rgb.shape[0], rgb.shape[1], 3),np.float32)
@@ -192,7 +192,7 @@ autoencoder.add(Permute((2, 1)))
 autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
-autoencoder.load_weights('model_weight_ep100.hdf5')
+autoencoder.load_weights('model_weight_ep360.hdf5')
 Sky = [128,128,128]
 Building = [128,0,0]
 Pole = [192,192,128]
