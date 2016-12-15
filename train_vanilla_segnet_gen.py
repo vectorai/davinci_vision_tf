@@ -209,16 +209,16 @@ autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
 autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
-autoencoder.load_weights('model_weight_ep360.hdf5')
+autoencoder.load_weights('model_weight_ep450.hdf5')
 
 #current_dir = os.path.dirname(os.path.realpath(__file__))
 #model_path = os.path.join(current_dir, "autoencoder.png")
 #plot(model_path, to_file=model_path, show_shapes=True)
 
-nb_epoch =  90
+nb_epoch =  50
 batch_size = 5
 
 history = autoencoder.fit_generator(batch_data_gen(batch_size), 500, nb_epoch=nb_epoch)#,
                     #show_accuracy=True)#, class_weight=class_weighting )#, validation_data=(X_test, X_test))
 
-autoencoder.save_weights('model_weight_ep450.hdf5')
+autoencoder.save_weights('model_weight_ep600.hdf5')

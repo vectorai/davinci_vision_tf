@@ -192,7 +192,7 @@ autoencoder.add(Permute((2, 1)))
 autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
-autoencoder.load_weights('model_weight_ep360.hdf5')
+autoencoder.load_weights('model_weight_ep500.hdf5')
 Sky = [128,128,128]
 Building = [128,0,0]
 Pole = [192,192,128]
