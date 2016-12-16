@@ -1,5 +1,6 @@
 import rospy
 import sys
+#from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image
 from std_msgs.msg import String
 from cv_bridge import CvBridge
@@ -103,54 +104,66 @@ def demo(sess, net, im,vis=False):
         if vis:
             vis_detections(im, cls, dets, ax, thresh=CONF_THRESH)
 class RosTensorFlow():
-    def __init__(self,model=None,img_shape=None, input_tensor=None):
+    def __init__(self,model=None,type_='segmentation',img_shape=None, input_tensor=None):
         classify_image.maybe_download_and_extract()
         self._session = tf.Session()
         self.tensor_2_run=model
-        classify_image.create_graph()
+        init = tf.initialize_all_variables()
+        self._session.run(init)
+        #classify_image.create_graph()
         self._cv_bridge = CvBridge()
         self.input_tensor=input_tensor
         self.img_shape=img_shape
+        self.type_=type_
 
         self._sub = rospy.Subscriber('image', Image, self.callback, queue_size=1)
         print('found camera')
-        self._pub = rospy.Publisher('result', Image, queue_size=1)
+        self._pub = rospy.Publisher('result', String, queue_size=1)
         print('setup publishing')
+        self.count=0
 
     def callback(self, image_msg):
-        cv_image = self._cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
+        print('getting image')
+        img=np.fromstring(image_msg.data,np.uint8).reshape(image_msg.height, image_msg.width, 3)
+        #cv_image = self._cv_bridge.imgmsg_to_cv2(image_msg, "bgr8")
         print('got image')
-        if sys.argv[1]=='segmentation':
-            cv_image = np.array([np.rollaxis(cv2.resize(cv_image,(self.img_shape[2],self.img_shape[1])),2)])
+        if self.type_=='segmentation':
+            #cv_image = np.array([np.rollaxis(cv2.resize(cv_image,(self.img_shape[2],self.img_shape[1])),2)])
+            cv_image = np.array([np.rollaxis(cv2.resize(img,(self.img_shape[2],self.img_shape[1])),2)])
+            cv_image[:,:,[0,1,2]] = cv_image[:,:,[2,1,0]] 
             print('reshaped image')
         # copy from
         # https://github.com/tensorflow/tensorflow/blob/master/tensorflow/models/image/imagenet/classify_image.py
         #image_data = cv2.imencode('.jpg', cv_image)[1].tostring()
         # Creates graph from saved GraphDef.
             predictions = self._session.run(
-                self.tensor_2_run, {self.input_tensor: cv_image})
+                    self.tensor_2_run, {self.input_tensor: cv_image})#,K.learning_phase():0})
             print('ran tensor')
         # Creates node ID --> English string lookup.
-            predictions=visualize(np.argmax(predictions[0],axis=1).reshape((self.img_shape[1],self.img_shape[2])), False)
+            #predictions=visualize(np.argmax(predictions[0],axis=1).reshape((self.img_shape[1],self.img_shape[2])), False)
+            predictions=np.argmax(predictions[0],axis=1).reshape((self.img_shape[1],self.img_shape[2]))
             print('reformatted results')
-
-            self._pub.publish(self._cv_bridge.cv2_to_imgmsg(predictions,'bgr8'))
+            cv2.imwrite('output_vids/vid1_%5d.png'%self.count,predictions)
+            #self._pub.publish(self._cv_bridge.cv2_to_imgmsg(predictions,'bgr8'))
+            self._pub.publish('segmented img # '+str(self.count))
+            self.count+=1
             print('published results')
-        if sys.argv[1]=='detection':
+        if self.type_=='detection':
             self.tensor_2_run(self._session,cv_image)
             #TODO: Figure out how to publishmultiple arrays at once
     def main(self):
         rospy.spin()
 
 if __name__ == '__main__':
+    K.set_learning_phase(0)
     rospy.init_node('rostensorflow')
     tensor=None
     if sys.argv[1]=='segmentation':
         the_model=model((3,360,480))
-        the_model.load_weights('model_weight_ep100.hdf5')
+        the_model.load_weights('model_weight_ep500.hdf5')
         x=K.placeholder(shape=(None,3,360,480),dtype='float32')
         outputs=the_model(x)
-        tensor=RosTensorFlow(outputs,(3,360,480),x)
+        tensor=RosTensorFlow(outputs,'segmentation',(3,360,480),x)
     elif sys.argv[1]=='detection':
         sys.path.insert(0,'Faster-RCNN_TF/tools/')
         import _init_paths
@@ -159,5 +172,5 @@ if __name__ == '__main__':
         from fast_rcnn.nms_wrapper import nms
         from networks.factory import get_network
         net=get_network('VGGnet_test')
-        tensor = RosTensorFlow(lambda x,y:demo(x,net,y))
+        tensor = RosTensorFlow(lambda x,y:demo(x,net,y),'detection')
     tensor.main()

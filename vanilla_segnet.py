@@ -28,7 +28,7 @@ import numpy as np
 
 path = './household_data/rgbd-dataset/'
 data_shape = 360*480
-num_classes=10
+num_classes=53
 
 class UnPooling2D(Layer):
     """A 2D Repeat layer"""
