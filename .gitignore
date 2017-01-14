@@ -6,3 +6,8 @@
 
 #egg metadata from setup
 /*.egg-info
+
+#datasets xml mat png
+*.xml
+*.png
+*.mat

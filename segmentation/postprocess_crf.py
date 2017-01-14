@@ -1,13 +1,15 @@
 import pydensecrf.densecrf as dcrf
+import numpy as np
 
 from pydensecrf.utils import compute_unary, create_pairwise_bilateral, \
     create_pairwise_gaussian, softmax_to_unary
 
 import skimage.io as io
 
-def process(image):
-	softmax = final_probabilities.squeeze()
+def process(final_probabilities,image):
 
+	softmax = final_probabilities.squeeze()
+	print softmax.shape
 	processed_probabilities = softmax.transpose((2, 0, 1))
 
 	# The input should be the negative of the logarithm of probability values
@@ -38,4 +40,4 @@ def process(image):
 	d.addPairwiseEnergy(feats, compat=10,
 	                     kernel=dcrf.DIAG_KERNEL,
 	                     normalization=dcrf.NORMALIZE_SYMMETRIC)
-	returnd.inference(5)
+	return d.inference(5)

@@ -26,7 +26,7 @@ import h5py as h5
 import cv2
 import numpy as np
 
-path = './household_data/rgbd-dataset/'
+path = '../household_data/rgbd-dataset/'
 data_shape = 360*480
 num_classes=53
 def normalized(rgb):
@@ -192,7 +192,7 @@ autoencoder.add(Permute((2, 1)))
 autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
-autoencoder.load_weights('model_weight_ep500.hdf5')
+autoencoder.load_weights('../model_weight_ep500.hdf5')
 Sky = [128,128,128]
 Building = [128,0,0]
 Pole = [192,192,128]
@@ -236,6 +236,12 @@ for imname in imlist:
 #autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
 im=np.array(ims)
 output=autoencoder.predict(im)
+import sys
+sys.path.append('../segmentation')
+import postprocess_crf
+for i,out in enumerate(output):
+    Q=postprocess_crf.process(out.reshape(360,480,53),im[i])
+    output[i]=np.argmax(Q, axis=0).reshape((image.shape[0], image.shape[1]))
 for i,imname in enumerate(imlist):
     pred = visualize(np.argmax(output[i],axis=1).reshape((360,480)), False)
     plt.imsave('out%d.png'%(i),pred)

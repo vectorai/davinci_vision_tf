@@ -25,7 +25,7 @@ import h5py as h5
 import cv2
 import numpy as np
 
-path = './household_data/rgbd-dataset/'
+path = '../household_data/rgbd-dataset/'
 data_shape = 360*480
 num_classes=53
 def normalized(rgb):
@@ -209,7 +209,7 @@ autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
 autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
-autoencoder.load_weights('model_weight_ep450.hdf5')
+autoencoder.load_weights('../model_weight_ep450.hdf5')
 
 #current_dir = os.path.dirname(os.path.realpath(__file__))
 #model_path = os.path.join(current_dir, "autoencoder.png")
@@ -221,4 +221,4 @@ batch_size = 5
 history = autoencoder.fit_generator(batch_data_gen(batch_size), 500, nb_epoch=nb_epoch)#,
                     #show_accuracy=True)#, class_weight=class_weighting )#, validation_data=(X_test, X_test))
 
-autoencoder.save_weights('model_weight_ep600.hdf5')
+autoencoder.save_weights('../model_weight_ep600.hdf5')
