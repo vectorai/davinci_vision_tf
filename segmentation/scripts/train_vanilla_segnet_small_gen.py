@@ -74,7 +74,7 @@ def prep_data_gen(shuffle_every=1000):
 #        print (path+txt[i][1])
         train_label.append(binarylab(cv2.resize(cv2.imread(path + txt[i][1],0),(480/4,360/4)),int(txt[i][2])))
         yield (train_data), (train_label)
-def batch_data_gen(batch_sizei,shuffle_every=1000):
+def batch_data_gen(batch_size,shuffle_every=1000):
     the_gen=prep_data_gen(shuffle_every)
     i=0
     while True:
@@ -132,13 +132,13 @@ class UnPooling2D(Layer):
         return {"name":self.__class__.__name__,
             "poolsize":self.poolsize}
 
-def create_encoding_layers():
+def create_encoding_layers(input_shape):
     kernel = 3
     filter_size = 64
     pad = 1
     pool_size = 2
     return [
-        ZeroPadding2D(padding=(pad,pad)),
+        ZeroPadding2D(input_shape=input_shape,padding=(pad,pad)),
         Convolution2D(filter_size, kernel, kernel, border_mode='valid'),
         BatchNormalization(),
         Activation('relu'),
@@ -170,10 +170,9 @@ def create_decoding_layers():
 
 autoencoder = models.Sequential()
 # Add a noise layer to get a denoising autoencoder. This helps avoid overfitting
-autoencoder.add(Layer(input_shape=(3,360/4, 480/4)))
 
-autoencoder.add(GaussianNoise(sigma=0.3))
-autoencoder.encoding_layers = create_encoding_layers()
+autoencoder.add(GaussianNoise(input_shape=(3,360/4, 480/4),sigma=0.3))
+autoencoder.encoding_layers = create_encoding_layers(input_shape=(3,360/4, 480/4))
 autoencoder.decoding_layers = create_decoding_layers()
 for i,l in enumerate(autoencoder.encoding_layers):
     autoencoder.add(l)

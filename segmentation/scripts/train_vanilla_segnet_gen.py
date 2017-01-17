@@ -26,7 +26,7 @@ import h5py as h5
 import cv2
 import numpy as np
 
-path = '../household_data/rgbd-dataset/'
+path = '../../household_data/rgbd-dataset/'
 data_shape = 360*480
 num_classes=53
 def normalized(rgb):
@@ -51,15 +51,20 @@ def binarylab(labels,class_):
             x[i,j,lab_]=1
     return x
 
-def prep_data_gen():
+def prep_data_gen(shuffle_every=1000):
     import os
     with open(path+'train.txt') as f:
         txt = f.readlines()
         txt = [line.split(' ') for line in txt]
+    ind_list=np.arange(len(txt))
+    h=0
     while True:
         train_data = []
         train_label = []
-        i=np.random.randint(len(txt))
+    h%=shuffle_every
+    if h==0:
+        np.random.shuffle(ind_list)
+        i=ind_list[h]
         if not os.path.exists(path+txt[i][0]):
             continue
         train_data.append(np.rollaxis(normalized(cv2.resize(cv2.imread(path + txt[i][0]), (480,360))),2))
@@ -68,11 +73,9 @@ def prep_data_gen():
             continue
 #        print (path+txt[i][1])
         train_label.append(binarylab(cv2.resize(cv2.imread(path + txt[i][1],0),(480,360)),int(txt[i][2])))
-        if i%100==0:
-            print(str(i))
         yield (train_data), (train_label)
-def batch_data_gen(batch_size):
-    the_gen=prep_data_gen()
+def batch_data_gen(batch_size,shuffle_every=1000):
+    the_gen=prep_data_gen(shuffle_every)
     i=0
     while True:
         x,y=[],[]
@@ -190,7 +193,7 @@ def create_decoding_layers():
 autoencoder = models.Sequential()
 # Add a noise layer to get a denoising autoencoder. This helps avoid overfitting
 
-#autoencoder.add(GaussianNoise(sigma=0.3))
+autoencoder.add(GaussianNoise(input_shape=(3,360, 480),sigma=0.3))
 autoencoder.encoding_layers = create_encoding_layers((3,360,480))
 autoencoder.decoding_layers = create_decoding_layers()
 for i,l in enumerate(autoencoder.encoding_layers):
@@ -209,7 +212,7 @@ autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
 autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
-autoencoder.load_weights('../model_weight_ep500.hdf5')
+autoencoder.load_weights('../models/model_weight_ep500.hdf5')
 
 #current_dir = os.path.dirname(os.path.realpath(__file__))
 #model_path = os.path.join(current_dir, "autoencoder.png")
@@ -218,6 +221,6 @@ autoencoder.load_weights('../model_weight_ep500.hdf5')
 nb_epoch =  50
 batch_size = 5
 
-#history = autoencoder.fit_generator(batch_data_gen(batch_size), 500, nb_epoch=nb_epoch)#,
+#history = autoencoder.fit_generator(batch_data_gen(batch_size,1000), 500, nb_epoch=nb_epoch)#,
                     #show_accuracy=True)#, class_weight=class_weighting )#, validation_data=(X_test, X_test))
-autoencoder.save('../model_ep500.hdf5')
+autoencoder.save('../models/model_ep500.hdf5')
