@@ -13,7 +13,8 @@ np.random.seed(1337) # for reproducibility
 
 from keras.layers.noise import GaussianNoise
 import keras.models as models
-from keras.layers.core import Layer, Dense, Dropout, Activation, Flatten, Reshape, Merge, Permute
+from keras.layers.core import Layer,Dense, Dropout, Activation, Flatten, Reshape, Merge, Permute
+from keras.layers import Input
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, UpSampling2D, ZeroPadding2D
 from keras.layers.normalization import BatchNormalization
 from keras.utils import np_utils
@@ -128,13 +129,13 @@ class UnPooling2D(Layer):
         return {"name":self.__class__.__name__,
             "poolsize":self.poolsize}
 
-def create_encoding_layers():
+def create_encoding_layers(input_shape):
     kernel = 3
     filter_size = 64
     pad = 1
     pool_size = 2
     return [
-        ZeroPadding2D(padding=(pad,pad)),
+        ZeroPadding2D(input_shape=input_shape,padding=(pad,pad)),
         Convolution2D(filter_size, kernel, kernel, border_mode='valid'),
         BatchNormalization(),
         Activation('relu'),
@@ -188,10 +189,9 @@ def create_decoding_layers():
 
 autoencoder = models.Sequential()
 # Add a noise layer to get a denoising autoencoder. This helps avoid overfitting
-autoencoder.add(Layer(input_shape=(3,360, 480)))
 
 #autoencoder.add(GaussianNoise(sigma=0.3))
-autoencoder.encoding_layers = create_encoding_layers()
+autoencoder.encoding_layers = create_encoding_layers((3,360,480))
 autoencoder.decoding_layers = create_decoding_layers()
 for i,l in enumerate(autoencoder.encoding_layers):
     autoencoder.add(l)
@@ -209,7 +209,7 @@ autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
 autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
-autoencoder.load_weights('../model_weight_ep450.hdf5')
+autoencoder.load_weights('../model_weight_ep500.hdf5')
 
 #current_dir = os.path.dirname(os.path.realpath(__file__))
 #model_path = os.path.join(current_dir, "autoencoder.png")
@@ -218,7 +218,6 @@ autoencoder.load_weights('../model_weight_ep450.hdf5')
 nb_epoch =  50
 batch_size = 5
 
-history = autoencoder.fit_generator(batch_data_gen(batch_size), 500, nb_epoch=nb_epoch)#,
+#history = autoencoder.fit_generator(batch_data_gen(batch_size), 500, nb_epoch=nb_epoch)#,
                     #show_accuracy=True)#, class_weight=class_weighting )#, validation_data=(X_test, X_test))
-
-autoencoder.save_weights('../model_weight_ep600.hdf5')
+autoencoder.save('../model_ep500.hdf5')
