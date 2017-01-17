@@ -13,6 +13,7 @@ np.random.seed(1337) # for reproducibility
 
 from keras.layers.noise import GaussianNoise
 import keras.models as models
+from keras.models import load_model
 from keras.layers.core import Layer, Dense, Dropout, Activation, Flatten, Reshape, Merge, Permute
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, UpSampling2D, ZeroPadding2D
 from keras.layers.normalization import BatchNormalization
@@ -50,15 +51,20 @@ def binarylab(labels,class_):
             x[i,j,lab_]=1
     return x
 
-def prep_data_gen():
+def prep_data_gen(shuffle_every=1000):
     import os
     with open(path+'train.txt') as f:
         txt = f.readlines()
         txt = [line.split(' ') for line in txt]
+    ind_list=np.arange(len(txt))
+    h=0
     while True:
         train_data = []
         train_label = []
-        i=np.random.randint(len(txt))
+	h%=shuffle_every
+	if h==0:
+		np.random.shuffle(ind_list)
+        i=ind_list[h]
         if not os.path.exists(path+txt[i][0]):
             continue
         train_data.append(np.rollaxis(normalized(cv2.resize(cv2.imread(path + txt[i][0]), (480/4,360/4))),2))
@@ -67,11 +73,9 @@ def prep_data_gen():
             continue
 #        print (path+txt[i][1])
         train_label.append(binarylab(cv2.resize(cv2.imread(path + txt[i][1],0),(480/4,360/4)),int(txt[i][2])))
-        if i%100==0:
-            print(str(i))
         yield (train_data), (train_label)
-def batch_data_gen(batch_size):
-    the_gen=prep_data_gen()
+def batch_data_gen(batch_sizei,shuffle_every=1000):
+    the_gen=prep_data_gen(shuffle_every)
     i=0
     while True:
         x,y=[],[]
@@ -168,7 +172,7 @@ autoencoder = models.Sequential()
 # Add a noise layer to get a denoising autoencoder. This helps avoid overfitting
 autoencoder.add(Layer(input_shape=(3,360/4, 480/4)))
 
-#autoencoder.add(GaussianNoise(sigma=0.3))
+autoencoder.add(GaussianNoise(sigma=0.3))
 autoencoder.encoding_layers = create_encoding_layers()
 autoencoder.decoding_layers = create_decoding_layers()
 for i,l in enumerate(autoencoder.encoding_layers):
@@ -180,23 +184,24 @@ for l in autoencoder.decoding_layers:
 
 the_conv=(Convolution2D(num_classes, 1, 1, border_mode='valid',))
 autoencoder.add(the_conv)
-print (the_conv.input_shape,the_conv.output_shape)
+#print (the_conv.input_shape,the_conv.output_shape)
 autoencoder.add(Reshape((num_classes,data_shape)))#, input_shape=(num_classes,360,480)))
 autoencoder.add(Permute((2, 1)))
 autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
+#autoencoder=load_model('../small_model_ep125.hdf5')
 autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
-#autoencoder.load_weights('../model_weight_ep450.hdf5')
+autoencoder.load_weights('../small_model_ep385.hdf5')
 
 #current_dir = os.path.dirname(os.path.realpath(__file__))
 #model_path = os.path.join(current_dir, "autoencoder.png")
 #plot(model_path, to_file=model_path, show_shapes=True)
 
-nb_epoch =  25
+nb_epoch = 80 
 batch_size = 5
 
-history = autoencoder.fit_generator(batch_data_gen(batch_size), 500, nb_epoch=nb_epoch)#,
+history = autoencoder.fit_generator(batch_data_gen(batch_size,500), 500, nb_epoch=nb_epoch)#,
                     #show_accuracy=True)#, class_weight=class_weighting )#, validation_data=(X_test, X_test))
 
-autoencoder.save_weights('../small_weight_ep30.hdf5')
+autoencoder.save('../small_model_ep465.hdf5')
