@@ -6,7 +6,7 @@ from pydensecrf.utils import compute_unary, create_pairwise_bilateral, \
 
 import skimage.io as io
 
-def process(final_probabilities,image):
+def process(final_probabilities,image,iters):
 
 	softmax = final_probabilities.squeeze()
 	print softmax.shape
@@ -40,4 +40,4 @@ def process(final_probabilities,image):
 	d.addPairwiseEnergy(feats, compat=10,
 	                     kernel=dcrf.DIAG_KERNEL,
 	                     normalization=dcrf.NORMALIZE_SYMMETRIC)
-	return d.inference(5)
+	return d.inference(iters)

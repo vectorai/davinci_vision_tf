@@ -192,7 +192,7 @@ autoencoder.add(Permute((2, 1)))
 autoencoder.add(Activation('softmax'))
 #from keras.optimizers import SGD
 #optimizer = SGD(lr=0.01, momentum=0.8, decay=0., nesterov=False)
-autoencoder.load_weights('../model_weight_ep500.hdf5')
+autoencoder.load_weights('../models/model_weight_ep500.hdf5')
 Sky = [128,128,128]
 Building = [128,0,0]
 Pole = [192,192,128]
@@ -235,9 +235,9 @@ for imname in imlist:
     ims+=[im]
 #autoencoder.compile(loss="categorical_crossentropy", optimizer='adadelta',metrics=['accuracy'])
 im=np.array(ims)
-output=autoencoder.predict(im)
+output=autoencoder.predict(np.array([im[0].squeeze()]))
 import sys
-sys.path.append('../segmentation')
+sys.path.append('..')
 import postprocess_crf
 for i,out in enumerate(output):
     Q=postprocess_crf.process(out.reshape(360,480,53),im[i])
